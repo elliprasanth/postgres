@@ -1,0 +1,106 @@
+############################################################################################################################
+1.Postgres rpm installations
+# Install the repository RPM:
+sudo dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+
+# Disable the built-in PostgreSQL module:
+sudo dnf -qy module disable postgresql
+
+# Install PostgreSQL:
+sudo dnf install -y postgresql16-server
+
+##################################################################################################################################
+permission changes and initdb
+chmod -R 755/postgres
+
+chown postgres:postgres /postgres/ -R
+
+su - postgres
+
+cd /usr/pgsql-16/bin
+./pg_ctl -D /postgres/data/ initdb
+./pg_ctl -D /postgres/data/ start
+##################################################################################################################################
+
+3.postgresql.conf changes
+-------------------------------------------------------
+# Connection Settings-
+
+port 30000
+
+listen_addresses 10.21.13.74, localhost'   #what IP address(es) to listen on; #prod
+
+max_connections = 100
+shared buffers = 15GB
+effective_cache_size = 46GB
+log_autovacuum_min_duration = 0
+autovacuum_naptime 1min
+log_rotation_size = 100MB
+log_min_duration_statement 1000
+log_destination = 'stderr'
+logging_collector = on
+lc_messages = 'en_IN.UTF-8'
+lc_monetary= 'en_IN.UTF-8'
+lc_numeric = 'en_IN.UTF-8"
+1c_time = 'en_IN.UTF-8'
+log_filename = 'Gramener-%Y-%m-%d_%H%M%S.log'
+log_line_prefix = '%t [%p]: host: [%] [%1-1] user=%u, tran_id=[%x ] db=%d'
+
+post changes do restart
+/usr/pgsql-16/bin/pg_ctl -D /postgres/data/ stop
+##################################################################################################################################
+4. add DR entry in  pg_hba.conf 
+host    all             postgres       10.2.0.22                trust
+
+#################################################################################################################################
+5.password less authentication between servers
+ssh-copy-id postgres@10.2.0.21
+ssh-copy-id postgres@10.2.0.22
+##################################################################################################################################
+6. adding pgpass in postgres home directory if any failure will password for this
+
+localhost:6444:postgres:postgres:postgres
+localhost:6444:replication:postgres:postgres
+10.2.0.21:6444:replication:postgres:postgres
+10.2.0.22:6444:replication:postgres:postgres
+10.2.0.21:6444:postgres:postgres:postgres
+10.2.0.22:6444:postgres:postgres:postgres
+#################################################################################################################################
+7. enable archive on postgres.config
+
+archive mode = on
+
+archive_command 'cp %p/archive/archives/%f'
+
+Make a archives directory/archive/archives/ ( mkdir -p /archive/archives/)
+chmod 777  /archive/archives/ -R
+chown postgres:postgres  /archive/archives/ -R
+
+Make the parameter changes according to the DR server in postgres.conf
+##################################################################################################################################
+8.make a file standby.signal without any data
+
+create a file postgresql.auto.conf with below entry.
+
+primary_conninfo = 'host=10.2.0.22 port=6444 user=postgres password=postgres'
+
+restore_command="/postgres/postgres13/cron_entries/scp_wal_sync_v1.0.sh %f &' or 'cp %p/archive/archives/%f'
+################################################################################################################################
+password_encryption = scram-sha-256 add this postgres.conf
+###################################################################################################################################
+run this in DR after deleting all files in data directory
+
+pg_basebackup -h 10.2.0.21 -U  postgres -p 6444 -D /postgres/data/ -Fp -Xs -P -R --checkpoint=fast >/tmp/transactions.out
+
+default_transaction_read_only = on make it on DR site and restart
+
+#############################PR To DR########################################################################################
+
+1. stop db in pr /usr/pgsql-16/bin/pg_ctl -D /postgres/data/ stop
+2. remove stand.signal in DR and create stand.signal in PR 
+3. #default_transaction_read_only = off in DR
+
+
+
+
+

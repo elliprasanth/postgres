@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Check if source, destination, and file list arguments are provided
+if [ $# -ne 3 ]; then
+  echo "Usage: $0 <source_directory> <destination_directory> <file_list>"
+  exit 1
+fi
+
+# Read source directory from first argument
+source_dir="$1"
+
+# Read destination directory from second argument
+destination_dir="$2"
+
+# Read file list path from third argument
+file_list="$3"
+
+# Check if source directory exists
+if [ ! -d "$source_dir" ]; then
+  echo "Error: Source directory '$source_dir' does not exist."
+  exit 1
+fi
+
+# Check if destination directory exists
+if [ ! -d "$destination_dir" ]; then
+  echo "Error: Destination directory '$destination_dir' does not exist."
+  exit 1
+fi
+
+# Check if file list exists
+if [ ! -f "$file_list" ]; then
+  echo "Error: File list '$file_list' does not exist."
+  exit 1
+fi
+
+# Loop through each file in the list
+while IFS= read -r filename; do
+  # Find all occurrences of the filename within the source directory (including subfolders)
+  found_files=( $(find "$source_dir" -name "$filename" -type f) )
+
+  # Check if any files were found
+  if [[ ${#found_files[@]} -eq 0 ]]; then
+    echo "File '$filename' not found in source directory."
+  else
+    # Copy all found files to the destination directory
+    for file in "${found_files[@]}"; do
+      cp "$file" "$destination_dir"
+      echo "Copied '$file' to '$destination_dir'."
+    done
+  fi
+done < "$file_list"
+
+echo "File copy completed."
