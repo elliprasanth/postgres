@@ -1,0 +1,60 @@
+list to size of DB's:
+
+SELECT d.datname AS database_name,
+       pg_size_pretty(pg_database_size(d.datname)) AS size
+FROM pg_database d;
+
+list databases: \l or \l+
+lsit schemas: \dn
+
+backup full database:
+
+pg_dump -U postgres -F c -b -v -f /tmp/postgresbackup_file.dump postgres
+
+restores to new backup database:
+
+pg_restore -U your_username -d new_database_name -v /path/to/backup_file.dump
+
+DB rename:
+alter database backup rename to postgresbkp;
+
+Postgres user list:
+SELECT usename FROM pg_catalog.pg_user;
+\du
+
+postgres password change:
+
+ALTER ROLE username WITH PASSWORD 'new_password';
+
+Grant permission to user:
+
+GRANT CREATE, SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO your_user;
+GRANT CREATE, CONNECT ON DATABASE your_database_name TO your_user;
+GRANT USAGE ON SCHEMA public TO your_user;
+SELECT grantee, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'your_user';
+
+
+postgres long running queries:
+
+SELECT 
+    pid,
+    usename,
+    datname,
+    state,
+    query,
+    now() - query_start AS duration
+FROM 
+    pg_stat_activity
+WHERE 
+    state = 'active'
+    AND now() - query_start > interval '5 minutes'
+ORDER BY 
+    duration DESC;
+
+
+
+
+
+
