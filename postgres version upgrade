@@ -1,0 +1,7 @@
+
+Postgres upgrade version :
+1. yum install postgresql-15
+2. Take backup of dump -pg_dumpall -U postgres -W -f /tmp/all_databases_backup.sql
+2./usr/lib/postgresql/16/bin/pg_ctl -D /data/ initdb
+3. move old /data directory to /data_bkp
+4./usr/lib/postgresql/16/bin/pg_upgrade --old-bindir=/usr/lib/postgresql/15/bin --new-bindir=/usr/lib/postgresql/16/bin --old-datadir=/data_bkp --new-datadir=/data
